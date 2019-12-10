@@ -1,2 +1,7 @@
 python-nmap==0.6.1
 netifaces==0.10.9
+impacket==0.9.20
+pyasn1==0.4.8
+pycryptodomex==3.7.3
+pysnmp==4.4.12
+pywinrm==0.4.1

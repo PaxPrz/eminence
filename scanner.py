@@ -1,6 +1,7 @@
 import nmap
 import netifaces as ni
 import math
+import sys
 
 class HostScanner:
     '''
@@ -41,21 +42,30 @@ class HostScanner:
         self.subnet = input("Enter subnet mask: ")
 
     def scan(self, arguments=''):
+        self.OS_DETECT=True
         print("Scanning network ", self.ip, "/", self.subnet, "\n\tArguments: ", arguments)
         self.nm = nmap.PortScanner()
-        self.nm.scan(hosts=str(self.ip)+'/'+str(self.subnet), arguments=arguments)
+        try:
+            arguments = "-O"
+            self.nm.scan(hosts=str(self.ip)+'/'+str(self.subnet), arguments=arguments)
+        except Exception as e:
+            self.OS_DETECT=False
+            arguments = ""
+            self.nm.scan(hosts=str(self.ip)+'/'+str(self.subnet), arguments=arguments)
+        self.allHosts = self.nm.all_hosts()
     
     def showHosts(self):
-        for host in self.nm.all_hosts():
+        count = 1
+        for host in self.allHosts:
             try:
-                print("\nHost: ", host)
+                print("\n", count, ") Host: ", host)
                 print("PORT \t STATE \t SERVICE")
                 for port in list(self.nm[host]['tcp'].keys()):
                     print(port, "\t", self.nm[host]['tcp'][port]['state'], "\t", self.nm[host]['tcp'][port]['name'])
             except KeyError as k:
                 print("Host: ", host, " is not available!!!")
                 print("*** Try to do a rescan ***\n")
-            
+            count +=1
 
 
 
@@ -87,8 +97,9 @@ class PortScanner:
             print("Host: ", self.ip, " is not available!!!")
             print("*** Try to scan available host ***\n")
 
-if __name__=="__main__":
+def scanner_homepage():
     print('''
+    ##### NMAP SCANNER #####
         Choose
         \t1. HostScanner
         \t2. PortScanner
@@ -109,9 +120,19 @@ if __name__=="__main__":
         elif choice1=='2':
             hostscanner = HostScanner()
         else:
-            exit
+            print("Invalid option!")
+            sys.exit()
         hostscanner.scan()
         hostscanner.showHosts()
+        while 1:
+            try:
+                i=int(input("Select Host by id: "))
+                if i>len(hostscanner.allHosts):
+                    raise(Exception())
+                break
+            except Exception as e:
+                pass
+        return hostscanner.ip, hostscanner.allHosts[i-1]
     
     elif choice=='2':
         ip = input("Enter IP address: ")
@@ -123,6 +144,11 @@ if __name__=="__main__":
             portscanner = PortScanner(ip, specificPort=specificPort)
         portscanner.scan()
         portscanner.showResult()
+        return False, portscanner.ip
     
     else:
-        exit
+        return False, False
+
+
+if __name__=="__main__":
+    scanner_homepage()
