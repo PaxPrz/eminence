@@ -1,8 +1,6 @@
 import nmap
 import netifaces as ni
 import math
-import sys
-import os
 
 class HostScanner:
     '''
@@ -31,7 +29,7 @@ class HostScanner:
             if self.ip == 0 or self.netmask == 0:
                 print("Couldn't get ip and subnet automatically!!")
                 MANUAL_ENTER = True
-                self.manualEnter()
+                manualEnter()
             if MANUAL_ENTER == False:
                 octets = [int(i) for i in self.netmask.split('.')]
                 for octet in octets:
@@ -43,30 +41,35 @@ class HostScanner:
         self.subnet = input("Enter subnet mask: ")
 
     def scan(self, arguments=''):
-        self.OS_DETECT=True
+	self.OS_DETECT=True
         print("Scanning network ", self.ip, "/", self.subnet, "\n\tArguments: ", arguments)
         self.nm = nmap.PortScanner()
-        try:
-            arguments = "-O"
-            self.nm.scan(hosts=str(self.ip)+'/'+str(self.subnet), arguments=arguments)
-        except Exception as e:
-            self.OS_DETECT=False
-            arguments = ""
-            self.nm.scan(hosts=str(self.ip)+'/'+str(self.subnet), arguments=arguments)
-        self.allHosts = self.nm.all_hosts()
+	try:
+		arguments = "-O"
+	        self.nm.scan(hosts=str(self.ip)+'/'+str(self.subnet), arguments=arguments)
+	except Exception as e:
+		self.OS_DETECT=False
+		arguments = ""
+		self.nm.scan(hosts=str(self.ip)+'/'+str(self.subnet), arguments=arguments)
     
     def showHosts(self):
-        count = 1
-        for host in self.allHosts:
+        for host in self.nm.all_hosts():
             try:
-                print("\n", count, ") Host: ", host)
-                print("PORT \t STATE \t SERVICE")
+                print("\nHost: ", host)
+	        if self.OS_DETECT:
+                    print("PORT \t STATE \t SERVICE \t OS")
+                else:
+                    print("PORT \t STATE \t SERVICE")
                 for port in list(self.nm[host]['tcp'].keys()):
-                    print(port, "\t", self.nm[host]['tcp'][port]['state'], "\t", self.nm[host]['tcp'][port]['name'])
+                    if self.OS_DETECT:
+                        print(port, "\t", self.nm[host]['tcp'][port]['state'], "\t", self.nm[host]['tcp'][port]['name'])
+                    else:
+                                                
+
             except KeyError as k:
                 print("Host: ", host, " is not available!!!")
                 print("*** Try to do a rescan ***\n")
-            count +=1
+            
 
 
 
@@ -89,33 +92,6 @@ class PortScanner:
         self.nm = nmap.PortScanner()
         self.nm.scan(self.ip, ports=self.specificPort, arguments=arguments)
     
-    def scanForVulnerability(self, port="80", arguments='-sV'):
-        print("Scanning for vulnerabiility")
-        if os.path.isfile('./nmap-vulners/vulners.nse'):
-            arguments = '-sV --script=./nmap-vulners/vulners.nse'
-        else:
-            print("Nmap vulnerability database not found")
-            nse_path = input("Enter path to nse file: ")
-            arguments = '-sV --script='+nse_path
-        try:
-            vnm = nmap.PortScanner()
-            vnm.scan(self.ip, ports=str(port), arguments=arguments)
-        except Exception as e:
-            print("Couldn't perform scan")
-            print(e)
-            return False
-        self.showVulnerability(vnm)
-        return True
-
-    def showVulnerability(self, vnm):
-        for port in list(vnm[self.ip]['tcp'].keys()):
-            try:
-                print("PORT: "+str(port)+"\t SERVICE: "+ vnm[self.ip]['tcp'][port]['name'])
-                print("Vulnerabilities: ")
-                print(vnm[self.ip]['tcp'][port]['script']['vulners'])
-            except Exception as e:
-                print("--- Cannot scan vulnerability ---")
-
     def showResult(self):
         try:
             print("PORT \t STATE \t PRODUCT \t SERVICE \t VERSION")
@@ -125,9 +101,8 @@ class PortScanner:
             print("Host: ", self.ip, " is not available!!!")
             print("*** Try to scan available host ***\n")
 
-def scanner_homepage():
+if __name__=="__main__":
     print('''
-    ##### NMAP SCANNER #####
         Choose
         \t1. HostScanner
         \t2. PortScanner
@@ -148,30 +123,9 @@ def scanner_homepage():
         elif choice1=='2':
             hostscanner = HostScanner()
         else:
-            print("Invalid option!")
-            sys.exit()
+            exit
         hostscanner.scan()
         hostscanner.showHosts()
-        while 1:
-            try:
-                i=int(input("Select Host by id: "))
-                if i>len(hostscanner.allHosts):
-                    raise(Exception())
-                break
-            except Exception as e:
-                pass
-        # Here vulnerability scanner
-        vulscanChoice = input("Do you want to perform PortScan and vulnerability scan (y/N): ")
-        if vulscanChoice=='y':
-            specificPort = input("Enter specific port (80,111,443,...): ")
-            if specificPort=='':
-                portscanner = PortScanner(hostscanner.allHosts[i-1])
-            else:
-                portscanner = PortScanner(hostscanner.allHosts[i-1], specificPort=specificPort)
-            portscanner.scan()
-            portscanner.showResult()
-            doVulScan(portscanner)
-        return hostscanner.ip, hostscanner.allHosts[i-1]
     
     elif choice=='2':
         ip = input("Enter IP address: ")
@@ -183,20 +137,6 @@ def scanner_homepage():
             portscanner = PortScanner(ip, specificPort=specificPort)
         portscanner.scan()
         portscanner.showResult()
-        # Here vulnerability scanner
-        vulscanChoice = input("Do you want to scan for vulnerability (y/N): ")
-        if vulscanChoice=='y':
-            doVulScan(portscanner)
-        return False, portscanner.ip
     
     else:
-        return False, False
-
-
-def doVulScan(ps):
-    ports = input("\nEnter ports for vulnerability scan (22,80,...): ")
-    vulScanResult = ps.scanForVulnerability(ports)
-    print("\n\n")
-
-if __name__=="__main__":
-    scanner_homepage()
+        exit
