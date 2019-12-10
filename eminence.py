@@ -30,7 +30,15 @@ if __name__=="__main__":
             snmp.show_snmp_result()
         username = snmp.find_username()
         if isinstance(username, str):
-            pass
+            print("Valid username is "+username)
+            checkInput = input("Do you want to check other users (y/N): ")
+            if checkInput == 'y':
+                for i, user in enumerate(snmp.allUsers):
+                    print(i+1, "\t ", user)
+                id = int(input("Enter id: "))
+            username = snmp.allUsers[id-1]
+            print("Selected Username: "+username)
+
         else:
             print("Cannot detect username")
             print("Here are a list of usernames found")
